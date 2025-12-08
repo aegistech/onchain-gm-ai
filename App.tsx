@@ -6,7 +6,8 @@ import { CryptoTicker } from './components/CryptoTicker';
 import { SpinWheel } from './components/SpinWheel';
 import { ThemeToggle } from './components/ThemeToggle';
 import { generateGMText, generateGMImage } from './services/geminiService';
-import { playSuccessSound } from './utils/audio';
+// FIX: Import from local components folder, not utils
+import { playSuccessSound } from './components/audio';
 
 // Type declaration for window.ethereum
 declare global {
