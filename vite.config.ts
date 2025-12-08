@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     define: {
-      // Expose process.env.API_KEY to the client-side code
+      // Expose process.env.API_KEY to the client-side code by stringifying it
       'process.env.API_KEY': JSON.stringify(env.API_KEY)
     }
   }
