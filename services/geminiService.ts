@@ -57,11 +57,18 @@ export const generateGMImage = async (userPrompt: string): Promise<string> => {
       },
     });
 
-    if (response.candidates && response.candidates[0].content.parts) {
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          const base64Data = part.inlineData.data;
-          return `data:image/png;base64,${base64Data}`;
+    // Safely access candidates using optional chaining
+    const candidates = response.candidates;
+    if (candidates && candidates.length > 0) {
+      const candidate = candidates[0];
+      // Check if content and parts exist
+      if (candidate.content && candidate.content.parts) {
+        for (const part of candidate.content.parts) {
+          // Check if inlineData exists
+          if (part.inlineData && part.inlineData.data) {
+            const base64Data = part.inlineData.data;
+            return `data:image/png;base64,${base64Data}`;
+          }
         }
       }
     }
