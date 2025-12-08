@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { playTickSound, playSuccessSound } from '../utils/audio';
+// FIX: Import from local file (same directory), not utils
+import { playTickSound, playSuccessSound } from './audio';
 
 interface SpinWheelProps {
   isSpinning: boolean;
