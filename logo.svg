@@ -1,0 +1,15 @@
+<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="brandGrad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+  </defs>
+  <path d="M20 2L35.5885 11V29L20 38L4.41154 29V11L20 2Z" stroke="url(#brandGrad)" stroke-width="2" fill="rgba(56, 189, 248, 0.1)"/>
+  <path d="M20 8L30 14V26L20 32L10 26V14L20 8Z" fill="url(#brandGrad)"/>
+  <path d="M20 14L24 18V22L20 24L16 22V18L20 14Z" fill="#fff"/>
+  <path d="M28 6L34 2" stroke="url(#brandGrad)" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M12 6L6 2" stroke="url(#brandGrad)" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M28 34L34 38" stroke="url(#brandGrad)" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M12 34L6 38" stroke="url(#brandGrad)" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

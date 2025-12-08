@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* RGB values for Light Mode (Gray 50 background) */
+  --bg-color: 249 250 251; 
+  --card-color: 255 255 255;
+  --text-color: 17 24 39;      /* Gray 900 */
+  --border-color: 229 231 235; /* Gray 200 */
+  --muted-color: 107 114 128;  /* Gray 500 */
+  --input-bg: 243 244 246;     /* Gray 100 */
+}
+
+.dark {
+  /* RGB values for Dark Mode (Deep Black/Gray) */
+  --bg-color: 10 10 10;
+  --card-color: 23 23 23;
+  --text-color: 255 255 255;
+  --border-color: 40 40 40;
+  --muted-color: 156 163 175; /* Gray 400 */
+  --input-bg: 30 30 30;
+}
+
+body {
+  background-color: rgb(var(--bg-color));
+  color: rgb(var(--text-color));
+  font-family: 'Space Grotesk', sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  overflow-x: hidden;
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  background-color: rgb(var(--card-color) / 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgb(var(--border-color) / 0.5);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgb(var(--bg-color));
+}
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 10px;
+}
