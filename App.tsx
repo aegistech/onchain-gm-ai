@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { AppMode, GeneratedContent } from './types';
 import { ResultCard } from './components/ResultCard';
@@ -5,6 +6,7 @@ import { CryptoTicker } from './components/CryptoTicker';
 import { SpinWheel } from './components/SpinWheel';
 import { ThemeToggle } from './components/ThemeToggle';
 import { generateGMText, generateGMImage } from './services/geminiService';
+import { playSuccessSound } from './utils/audio';
 
 // Type declaration for window.ethereum
 declare global {
@@ -29,8 +31,8 @@ const MintedBadge = ({ tx, streak, date }: { tx: string, streak: number, date: s
         {/* Ticket Design */}
         <div className="bg-white dark:bg-terminal border-2 border-black dark:border-white shadow-brutal relative p-6">
             {/* Cutout circles for ticket effect */}
-            <div className="absolute top-1/2 -left-3 w-6 h-6 bg-gray-100 dark:bg-[#0d1117] rounded-full border-r-2 border-black dark:border-white"></div>
-            <div className="absolute top-1/2 -right-3 w-6 h-6 bg-gray-100 dark:bg-[#0d1117] rounded-full border-l-2 border-black dark:border-white"></div>
+            <div className="absolute top-1/2 -left-3 w-6 h-6 bg-blue-50 dark:bg-[#0f172a] rounded-full border-r-2 border-black dark:border-white"></div>
+            <div className="absolute top-1/2 -right-3 w-6 h-6 bg-blue-50 dark:bg-[#0f172a] rounded-full border-l-2 border-black dark:border-white"></div>
 
             <div className="border-2 border-dashed border-black/30 dark:border-white/30 p-4">
                 <div className="flex justify-between items-center mb-4">
@@ -170,6 +172,7 @@ const App: React.FC = () => {
         setMintStatus('minted');
         setStreak(s => s + 1);
         setTotalGMs(t => t + 1);
+        playSuccessSound(); // Play victory sound
       }, 3000); 
 
     } catch (err: any) {
@@ -236,7 +239,8 @@ const App: React.FC = () => {
     <div className="min-h-screen pt-12 pb-20 font-mono transition-colors duration-300">
       <CryptoTicker />
 
-      <div className="p-4 max-w-md mx-auto">
+      {/* Main Container with Glassmorphism to contrast with background */}
+      <div className="p-6 max-w-md mx-auto mt-6 bg-white/70 dark:bg-black/60 backdrop-blur-sm rounded-xl border border-white/50 dark:border-white/10 shadow-xl">
         
         {/* Header */}
         <header className="mb-8 flex justify-between items-end border-b-4 border-black dark:border-white pb-4">
@@ -286,7 +290,7 @@ const App: React.FC = () => {
               <button 
                   onClick={handleMint}
                   disabled={mintStatus === 'minting' || mintStatus === 'minted'}
-                  className={`w-full py-4 font-black text-xl border-2 border-black dark:border-white shadow-brutal hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all uppercase relative overflow-hidden
+                  className={`w-full py-4 font-black text-xl border-2 border-black dark:border-white shadow-brutal hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all uppercase relative overflow-hidden rounded-lg
                   ${mintStatus === 'minting'
                       ? 'bg-gray-300 dark:bg-gray-800 text-gray-500'
                       : 'bg-neon-orange text-white dark:text-black'
@@ -311,13 +315,13 @@ const App: React.FC = () => {
         {/* Modal for Spin */}
         {showSpinModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-                <div className="bg-white dark:bg-terminal border-2 border-black dark:border-white p-6 max-w-xs w-full text-center shadow-brutal-lg">
+                <div className="bg-white dark:bg-terminal border-2 border-black dark:border-white p-6 max-w-xs w-full text-center shadow-brutal-lg rounded-xl">
                     <div className="text-4xl mb-4">🎁</div>
                     <h3 className="text-xl font-black uppercase text-black dark:text-white mb-2">SPIN RESULT</h3>
                     <p className="text-sm font-mono text-gray-600 dark:text-gray-300 mb-6">You collected a reward.</p>
                     <button 
                         onClick={() => { setShowSpinModal(false); setSpinResultIndex(null); }}
-                        className="w-full bg-black text-white dark:bg-white dark:text-black font-bold py-3 border-2 border-transparent hover:border-black dark:hover:border-white hover:bg-transparent hover:text-black dark:hover:text-white transition-all uppercase shadow-brutal"
+                        className="w-full bg-black text-white dark:bg-white dark:text-black font-bold py-3 border-2 border-transparent hover:border-black dark:hover:border-white hover:bg-transparent hover:text-black dark:hover:text-white transition-all uppercase shadow-brutal rounded-lg"
                     >
                         [ CLOSE ]
                     </button>
@@ -330,13 +334,13 @@ const App: React.FC = () => {
           <div className="flex mb-4">
              <button 
                 onClick={() => setMode(AppMode.GM_TEXT)}
-                className={`flex-1 py-2 font-bold uppercase text-sm border-2 border-black dark:border-white mr-2 shadow-brutal hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all ${mode === AppMode.GM_TEXT ? 'bg-black text-white dark:bg-white dark:text-black' : 'bg-white text-black dark:bg-black dark:text-white'}`}
+                className={`flex-1 py-2 font-bold uppercase text-sm border-2 border-black dark:border-white mr-2 shadow-brutal hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all rounded-lg ${mode === AppMode.GM_TEXT ? 'bg-black text-white dark:bg-white dark:text-black' : 'bg-white text-black dark:bg-black dark:text-white'}`}
              >
                 Text
              </button>
              <button 
                 onClick={() => setMode(AppMode.GM_IMAGE)}
-                className={`flex-1 py-2 font-bold uppercase text-sm border-2 border-black dark:border-white shadow-brutal hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all ${mode === AppMode.GM_IMAGE ? 'bg-black text-white dark:bg-white dark:text-black' : 'bg-white text-black dark:bg-black dark:text-white'}`}
+                className={`flex-1 py-2 font-bold uppercase text-sm border-2 border-black dark:border-white shadow-brutal hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all rounded-lg ${mode === AppMode.GM_IMAGE ? 'bg-black text-white dark:bg-white dark:text-black' : 'bg-white text-black dark:bg-black dark:text-white'}`}
              >
                 Image
              </button>
@@ -347,7 +351,7 @@ const App: React.FC = () => {
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   placeholder={mode === AppMode.GM_TEXT ? "Topic: Coffee, Pump, Monday..." : "Scene: Sunrise, Cyberpunk, Pepe..."}
-                  className="w-full bg-white dark:bg-black border-2 border-black dark:border-white p-4 font-mono text-sm focus:outline-none shadow-brutal mb-4 min-h-[100px]"
+                  className="w-full bg-white dark:bg-black border-2 border-black dark:border-white p-4 font-mono text-sm focus:outline-none shadow-brutal mb-4 min-h-[100px] rounded-lg"
                   disabled={genStatus !== 'idle'}
               />
 
@@ -355,7 +359,7 @@ const App: React.FC = () => {
               type="submit"
               disabled={genStatus !== 'idle'}
               className={`
-                  w-full py-3 font-bold text-sm border-2 border-black dark:border-white shadow-brutal hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all uppercase
+                  w-full py-3 font-bold text-sm border-2 border-black dark:border-white shadow-brutal hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all uppercase rounded-lg
                   ${genStatus !== 'idle' ? 'bg-gray-300' : 'bg-neon-green text-black'}
               `}
               >
