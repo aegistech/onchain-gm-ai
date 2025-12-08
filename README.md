@@ -1,4 +1,4 @@
-# FunDAO Protocol
+# onchain-gm-ai
 
 Decentralized crowdfunding platform on Base.
 
