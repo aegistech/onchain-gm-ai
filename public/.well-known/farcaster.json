@@ -12,6 +12,19 @@
     "imageUrl": "https://onchainbase.vercel.app/cover.png",
     "buttonTitle": "Launch GM App",
     "splashImageUrl": "https://onchainbase.vercel.app/logoo.png",
-    "splashBackgroundColor": "#e0f2fe"
+    "splashBackgroundColor": "#e0f2fe",
+    "requiredChains": [
+      "eip155:8453"
+    ],
+    "requiredCapabilities": [
+      "actions.ready"
+    ],
+    "primaryCategory": "social",
+    "tags": [
+      "gm",
+      "ai",
+      "base",
+      "daily"
+    ]
   }
 }
