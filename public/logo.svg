@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" fill="#e0f2fe"/>
+  
+  <!-- Sun Rays (Brutalist Style) -->
+  <path d="M256 40L256 120" stroke="black" stroke-width="40" stroke-linecap="square"/>
+  <path d="M256 392L256 472" stroke="black" stroke-width="40" stroke-linecap="square"/>
+  <path d="M40 256L120 256" stroke="black" stroke-width="40" stroke-linecap="square"/>
+  <path d="M392 256L472 256" stroke="black" stroke-width="40" stroke-linecap="square"/>
+  
+  <path d="M100 100L160 160" stroke="black" stroke-width="40" stroke-linecap="square"/>
+  <path d="M352 352L412 412" stroke="black" stroke-width="40" stroke-linecap="square"/>
+  <path d="M100 412L160 352" stroke="black" stroke-width="40" stroke-linecap="square"/>
+  <path d="M352 160L412 100" stroke="black" stroke-width="40" stroke-linecap="square"/>
+
+  <!-- Center Circle -->
+  <circle cx="256" cy="256" r="120" fill="#ff5f00" stroke="black" stroke-width="20"/>
+  
+  <!-- Text GM -->
+  <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-family="monospace" font-weight="900" font-size="100" fill="white">GM</text>
+</svg>
