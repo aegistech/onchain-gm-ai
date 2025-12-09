@@ -9,23 +9,32 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://onchainbase.vercel.app/logo.svg",
+      "src": "https://onchainbase.vercel.app/logoo.png",
       "sizes": "512x512",
       "type": "image/svg+xml"
     }
   ],
   "frame": {
-    "version": "next",
-    "imageUrl": "https://onchainbase.vercel.app/cover.svg",
-    "button": {
-      "title": "Launch GM App",
-      "action": {
-        "type": "launch_frame",
-        "name": "Onchain GM AI",
-        "url": "https://onchainbase.vercel.app/",
-        "splashImageUrl": "https://onchainbase.vercel.app/logo.svg",
-        "splashBackgroundColor": "#e0f2fe"
-      }
-    }
+    "version": "1",
+    "name": "Onchain GM AI",
+    "iconUrl": "https://onchainbase.vercel.app/logoo.png",
+    "homeUrl": "https://onchainbase.vercel.app",
+    "imageUrl": "https://onchainbase.vercel.app/cover.png",
+    "buttonTitle": "Launch GM App",
+    "splashImageUrl": "https://onchainbase.vercel.app/logoo.png",
+    "splashBackgroundColor": "#e0f2fe",
+    "requiredChains": [
+      "eip155:8453"
+    ],
+    "requiredCapabilities": [
+      "actions.ready"
+    ],
+    "primaryCategory": "social",
+    "tags": [
+      "gm",
+      "ai",
+      "base",
+      "daily"
+    ]
   }
 }
