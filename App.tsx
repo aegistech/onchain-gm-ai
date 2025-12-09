@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import sdk from '@farcaster/miniapp-sdk';
 import { AppMode, GeneratedContent } from './types';
 import { ResultCard } from './components/ResultCard';
 import { CryptoTicker } from './components/CryptoTicker';
@@ -94,6 +95,18 @@ const App: React.FC = () => {
   const [isSpinning, setIsSpinning] = useState(false);
   const [spinResultIndex, setSpinResultIndex] = useState<number | null>(null);
   const [showSpinModal, setShowSpinModal] = useState(false);
+
+  // Initialize Farcaster SDK
+  useEffect(() => {
+    const initFrame = async () => {
+      try {
+        await sdk.actions.ready();
+      } catch (err) {
+        console.error("Frame SDK Init Error:", err);
+      }
+    };
+    initFrame();
+  }, []);
 
   useEffect(() => {
     if (window.ethereum) {
