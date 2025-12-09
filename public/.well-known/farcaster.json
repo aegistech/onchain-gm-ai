@@ -3,5 +3,15 @@
     "header": "eyJmaWQiOjE4MTU4LCJ0eXBlIjoiYXV0aCIsImtleSI6IjB4NkRBNzNBOTA4YzM1YUJCN2QyZDM5NjJmYjFkYkQzQjYzQkE3RjZhMCJ9",
     "payload": "eyJkb21haW4iOiJvbmNoYWluYmFzZS52ZXJjZWwuYXBwIn0",
     "signature": "pSJmqDgS+24FKTQOybdhzAkhNGZ9IBb3l1B5c6dVmMZs25nJMBuUfoF/VBI/gsyb7Jhw4TNkvVYzXKM0BBi2Zhw="
+  },
+  "frame": {
+    "version": "1",
+    "name": "Onchain GM AI",
+    "iconUrl": "https://onchainbase.vercel.app/logoo.png",
+    "homeUrl": "https://onchainbase.vercel.app",
+    "imageUrl": "https://onchainbase.vercel.app/cover.png",
+    "buttonTitle": "Launch GM App",
+    "splashImageUrl": "https://onchainbase.vercel.app/logoo.png",
+    "splashBackgroundColor": "#e0f2fe"
   }
 }
