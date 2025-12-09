@@ -15,6 +15,7 @@ declare global {
 }
 
 const BASE_CHAIN_ID = '0x2105'; // 8453 in hex
+const GM_CONTRACT_ADDRESS = '0x1DEe998c8801aD2eE57CF4D54FF3263cd0a98b35';
 
 // Brutalist Badge
 const MintedBadge = ({ tx, streak, date }: { tx: string, streak: number, date: string }) => {
@@ -159,14 +160,22 @@ const App: React.FC = () => {
       setError(null);
       await switchToBaseChain();
 
+      // Send transaction to the real contract
+      // Function: gm() -> Selector: 0x2437e542
       const hash = await window.ethereum.request({
         method: 'eth_sendTransaction',
-        params: [{ from: walletAddress, to: walletAddress, value: '0x0', data: '0x6d696e742d676d' }],
+        params: [{ 
+            from: walletAddress, 
+            to: GM_CONTRACT_ADDRESS, 
+            value: '0x0', 
+            data: '0x2437e542' // keccak256("gm()").substring(0, 8)
+        }],
       });
 
       setLastMintTx(hash);
       setMintStatus('minting');
       
+      // Optimistic Update
       setTimeout(() => {
         setMintStatus('minted');
         setStreak(s => s + 1);
@@ -212,6 +221,7 @@ const App: React.FC = () => {
 
     try {
       await switchToBaseChain();
+      // Simple self-send signature for simulation of "AI Generation Fee" (0 ETH)
       await window.ethereum.request({
         method: 'eth_sendTransaction',
         params: [{ from: walletAddress, to: walletAddress, value: '0x0', data: '0x676d2d67656e' }],
