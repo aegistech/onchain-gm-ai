@@ -5,6 +5,7 @@ import { CryptoTicker } from './components/CryptoTicker';
 import { SpinWheel } from './components/SpinWheel';
 import { ThemeToggle } from './components/ThemeToggle';
 import { generateGMText, generateGMImage } from './services/geminiService';
+import { TabSwitcher } from './components/TabSwitcher';
 
 // Type declaration for window.ethereum
 declare global {
@@ -328,20 +329,7 @@ const App: React.FC = () => {
 
         {/* AI Generator */}
         <div className="border-t-4 border-black dark:border-white pt-8">
-          <div className="flex mb-4">
-             <button 
-                onClick={() => setMode(AppMode.GM_TEXT)}
-                className={`flex-1 py-2 font-bold uppercase text-sm border-2 border-black dark:border-white mr-2 shadow-brutal hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all rounded-lg ${mode === AppMode.GM_TEXT ? 'bg-black text-white dark:bg-white dark:text-black' : 'bg-white text-black dark:bg-black dark:text-white'}`}
-             >
-                Text
-             </button>
-             <button 
-                onClick={() => setMode(AppMode.GM_IMAGE)}
-                className={`flex-1 py-2 font-bold uppercase text-sm border-2 border-black dark:border-white shadow-brutal hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all rounded-lg ${mode === AppMode.GM_IMAGE ? 'bg-black text-white dark:bg-white dark:text-black' : 'bg-white text-black dark:bg-black dark:text-white'}`}
-             >
-                Image
-             </button>
-          </div>
+          <TabSwitcher currentMode={mode} onSwitch={setMode} />
 
           <form onSubmit={handleSubmit}>
               <textarea
