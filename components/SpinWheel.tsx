@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface SpinWheelProps {
   isSpinning: boolean;
@@ -40,12 +40,14 @@ export const SpinWheel: React.FC<SpinWheelProps> = ({ isSpinning, onSpin, result
         onFinished();
       }, 4000);
 
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+      };
     }
   }, [isSpinning, resultIndex, onFinished]);
 
   return (
-    <div className="flex flex-col items-center justify-center py-8 px-4 border-2 border-black dark:border-white bg-white dark:bg-terminal shadow-brutal relative mt-8">
+    <div className="flex flex-col items-center justify-center py-8 px-4 border-2 border-black dark:border-white bg-white/80 dark:bg-terminal/90 backdrop-blur-md shadow-brutal relative mt-8 rounded-xl">
       
       {/* Title */}
       <div className="flex items-center gap-2 mb-6 border-2 border-black dark:border-white px-4 py-1 bg-yellow-400 dark:bg-purple-600 shadow-brutal-sm transform -rotate-1">
@@ -103,7 +105,7 @@ export const SpinWheel: React.FC<SpinWheelProps> = ({ isSpinning, onSpin, result
         onClick={onSpin}
         disabled={disabled}
         className={`
-            w-full max-w-[200px] py-3 font-mono font-bold text-lg uppercase border-2 border-black dark:border-white shadow-brutal transition-all transform
+            w-full max-w-[200px] py-3 font-mono font-bold text-lg uppercase border-2 border-black dark:border-white shadow-brutal transition-all transform rounded-lg
             ${disabled 
                 ? 'bg-gray-300 dark:bg-gray-800 text-gray-500 cursor-not-allowed shadow-none translate-x-[4px] translate-y-[4px]' 
                 : 'bg-neon-green text-black hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:bg-white'}

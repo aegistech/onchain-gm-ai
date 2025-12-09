@@ -8,23 +8,23 @@ interface TabSwitcherProps {
 
 export const TabSwitcher: React.FC<TabSwitcherProps> = ({ currentMode, onSwitch }) => {
   return (
-    <div className="flex bg-slate-800/50 p-1 rounded-xl mb-6 border border-slate-700 backdrop-blur-sm">
+    <div className="flex mb-4 gap-2">
       <button
         onClick={() => onSwitch(AppMode.GM_TEXT)}
-        className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${
+        className={`flex-1 py-2 font-bold uppercase text-sm border-2 border-black dark:border-white transition-all rounded-lg ${
           currentMode === AppMode.GM_TEXT
-            ? 'bg-amber-500 text-slate-900 shadow-lg shadow-amber-500/20'
-            : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+            ? 'bg-black text-white dark:bg-white dark:text-black shadow-none translate-x-[1px] translate-y-[1px]'
+            : 'bg-white text-black dark:bg-black dark:text-white shadow-brutal hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]'
         }`}
       >
         📝 Write GM
       </button>
       <button
         onClick={() => onSwitch(AppMode.GM_IMAGE)}
-        className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${
+        className={`flex-1 py-2 font-bold uppercase text-sm border-2 border-black dark:border-white transition-all rounded-lg ${
           currentMode === AppMode.GM_IMAGE
-            ? 'bg-amber-500 text-slate-900 shadow-lg shadow-amber-500/20'
-            : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+            ? 'bg-black text-white dark:bg-white dark:text-black shadow-none translate-x-[1px] translate-y-[1px]'
+            : 'bg-white text-black dark:bg-black dark:text-white shadow-brutal hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]'
         }`}
       >
         🎨 Draw GM
