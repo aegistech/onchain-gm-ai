@@ -72,7 +72,8 @@ export const generateGMImage = async (userPrompt: string): Promise<string> => {
     // Extract image data
     if (response.candidates && response.candidates.length > 0) {
       const candidate = response.candidates[0];
-      if (candidate.content && candidate.content.parts) {
+      // Use optional chaining for safety
+      if (candidate?.content?.parts) {
         for (const part of candidate.content.parts) {
           // Fix: Use optional chaining to safely access inlineData.data
           const base64Data = part.inlineData?.data;
