@@ -9,21 +9,22 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/logo.svg",
+      "src": "https://onchainbase.vercel.app/logo.svg",
       "sizes": "512x512",
       "type": "image/svg+xml"
     }
   ],
   "frame": {
     "version": "next",
-    "imageUrl": "https://placehold.co/1200x630/e0f2fe/000000?text=Onchain+GM+AI",
+    "imageUrl": "https://onchainbase.vercel.app/cover.svg",
     "button": {
       "title": "Launch GM App",
       "action": {
         "type": "launch_frame",
         "name": "Onchain GM AI",
-        "url": "/",
-        "splashImageUrl": "https://placehold.co/200x200/e0f2fe/000000?text=Loading..."
+        "url": "https://onchainbase.vercel.app/",
+        "splashImageUrl": "https://onchainbase.vercel.app/logo.svg",
+        "splashBackgroundColor": "#e0f2fe"
       }
     }
   }
