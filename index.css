@@ -1,79 +1,32 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 body {
-  /* Oshi / Pastel Tech Style */
-  background-color: #e0f2fe; /* Light Blue Base */
+  /* Default Light Mode */
+  background-color: #f3f4f6; 
   color: #000000;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: 'Courier New', Courier, monospace; /* Retro font */
   -webkit-font-smoothing: antialiased;
-  min-height: 100vh;
-  position: relative;
-  overflow-x: hidden;
 }
-
-/* Geometric Background Pattern */
-body::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: -1;
-  pointer-events: none;
-  background-image: 
-    /* Large White Circle Top-Left */
-    radial-gradient(circle at 15% 20%, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 40%),
-    /* Large White Circle Bottom-Right */
-    radial-gradient(circle at 85% 80%, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 35%),
-    /* Tech Grid Lines */
-    linear-gradient(rgba(255, 255, 255, 0.5) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.5) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 100px 100px, 100px 100px;
-}
-
-/* Additional Decorative Circles */
-body::after {
-  content: '';
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 80vw;
-  height: 80vw;
-  max-width: 600px;
-  max-height: 600px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 50%;
-  z-index: -1;
-  pointer-events: none;
-}
-
 .dark body {
-  background-color: #0f172a; /* Dark Blue/Slate Base */
-}
-.dark body::before {
-    background-image: 
-    radial-gradient(circle at 15% 20%, rgba(30, 41, 59, 0.8) 0%, rgba(30, 41, 59, 0) 40%),
-    radial-gradient(circle at 85% 80%, rgba(30, 41, 59, 0.6) 0%, rgba(30, 41, 59, 0) 35%),
-    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-}
-.dark body::after {
-    border-color: rgba(255, 255, 255, 0.1);
+  background-color: #0d1117;
+  color: #f0f6fc;
 }
 
 /* Brutalist Scrollbar */
 ::-webkit-scrollbar {
   width: 12px;
-  background: rgba(0,0,0,0.05);
+  background: #e5e7eb;
+}
+.dark ::-webkit-scrollbar {
+  background: #161b22;
 }
 ::-webkit-scrollbar-thumb {
-  background: #3b82f6; /* Blue thumb */
-  border-radius: 6px;
-  border: 2px solid transparent;
-  background-clip: content-box;
+  background: #000;
+  border: 2px solid #e5e7eb;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #f0f6fc;
+  border: 2px solid #161b22;
 }
