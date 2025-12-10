@@ -100,7 +100,9 @@ const App: React.FC = () => {
   useEffect(() => {
     const initFrame = async () => {
       try {
-        await sdk.actions.ready();
+        if (sdk && sdk.actions && sdk.actions.ready) {
+            await sdk.actions.ready();
+        }
       } catch (err) {
         console.error("Frame SDK Init Error:", err);
       }
