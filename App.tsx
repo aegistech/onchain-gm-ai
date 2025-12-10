@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import sdk from '@farcaster/frame-sdk';
 import { AppMode, GeneratedContent } from './types';
@@ -409,14 +408,13 @@ const App: React.FC = () => {
               />
 
               <button
-              type="submit"
-              disabled={genStatus !== 'idle'}
-              className={`
-                  w-full py-3 font-bold text-sm border-2 border-black dark:border-white shadow-brutal hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all uppercase rounded-lg
-                  ${genStatus !== 'idle' ? 'bg-gray-300' : 'bg-neon-green text-black'}
-              `}
+                  type="submit"
+                  disabled={genStatus !== 'idle'}
+                  className={`w-full py-3 font-bold text-sm border-2 border-black dark:border-white shadow-brutal hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all uppercase rounded-lg ${
+                    genStatus !== 'idle' ? 'bg-gray-300' : 'bg-neon-green text-black'
+                  }`}
               >
-              {genStatus === 'idle' ? '[ GENERATE ]' : 'PROCESSING...'}
+                  {genStatus === 'idle' ? '[ GENERATE ]' : 'PROCESSING...'}
               </button>
           </form>
 
