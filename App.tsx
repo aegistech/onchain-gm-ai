@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import sdk from '@farcaster/frame-sdk';
 import { AppMode, GeneratedContent } from './types';
 import { ResultCard } from './components/ResultCard';
@@ -17,6 +18,29 @@ declare global {
 
 const BASE_CHAIN_ID = '0x2105'; // 8453 in hex
 const GM_CONTRACT_ADDRESS = '0x1DEe998c8801aD2eE57CF4D54FF3263cd0a98b35';
+
+// Helper to get the best provider, prioritizing Farcaster/Coinbase
+const getFarcasterProvider = () => {
+    // 1. First priority: The provider explicitly injected by the Frame SDK
+    if (sdk.wallet && sdk.wallet.ethProvider) {
+        return sdk.wallet.ethProvider;
+    }
+
+    // 2. Check for EIP-6963 Multi-Injected Providers
+    if (typeof window.ethereum !== 'undefined' && window.ethereum.providers) {
+        // Find the one that identifies as Coinbase Wallet (Warpcast uses this core)
+        const fcProvider = window.ethereum.providers.find((p: any) => p.isCoinbaseWallet);
+        if (fcProvider) return fcProvider;
+    }
+
+    // 3. Check if the main window.ethereum is Coinbase/Farcaster
+    if (typeof window.ethereum !== 'undefined' && window.ethereum.isCoinbaseWallet) {
+        return window.ethereum;
+    }
+
+    // 4. Last resort: Standard window.ethereum (MetaMask, etc.)
+    return window.ethereum;
+};
 
 // Brutalist Badge
 const MintedBadge = ({ tx, streak, date }: { tx: string, streak: number, date: string }) => {
@@ -110,29 +134,37 @@ const App: React.FC = () => {
     initFrame();
   }, []);
 
+  // Check for connected account on load
   useEffect(() => {
-    if (window.ethereum) {
-      window.ethereum.request({ method: 'eth_accounts' })
-        .then((accounts: string[]) => {
-          if (accounts.length > 0) {
-            setWalletAddress(accounts[0]);
-          }
-        })
-        .catch(console.error);
-    }
+    const checkAccount = async () => {
+        const provider = getFarcasterProvider();
+        if (provider) {
+            try {
+                const accounts = await provider.request({ method: 'eth_accounts' });
+                if (accounts.length > 0) {
+                    setWalletAddress(accounts[0]);
+                }
+            } catch (e) {
+                console.error("Error checking accounts:", e);
+            }
+        }
+    };
+    checkAccount();
   }, []);
 
   const switchToBaseChain = async () => {
-    if (!window.ethereum) return;
+    const provider = getFarcasterProvider();
+    if (!provider) return;
+
     try {
-      await window.ethereum.request({
+      await provider.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: BASE_CHAIN_ID }],
       });
     } catch (switchError: any) {
       if (switchError.code === 4902) {
         try {
-          await window.ethereum.request({
+          await provider.request({
             method: 'wallet_addEthereumChain',
             params: [
               {
@@ -152,9 +184,10 @@ const App: React.FC = () => {
   };
 
   const connectWallet = async () => {
-    if (typeof window.ethereum !== 'undefined') {
+    const provider = getFarcasterProvider();
+    if (provider) {
       try {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const accounts = await provider.request({ method: 'eth_requestAccounts' });
         setWalletAddress(accounts[0]);
         setError(null);
         await switchToBaseChain();
@@ -170,6 +203,9 @@ const App: React.FC = () => {
     if (mintStatus !== 'idle') return;
     if (!walletAddress) { await connectWallet(); return; }
 
+    const provider = getFarcasterProvider();
+    if (!provider) return;
+
     try {
       setMintStatus('signing');
       setError(null);
@@ -177,7 +213,7 @@ const App: React.FC = () => {
 
       // Send transaction to the real contract
       // Function: gm() -> Selector: 0x2437e542
-      const hash = await window.ethereum.request({
+      const hash = await provider.request({
         method: 'eth_sendTransaction',
         params: [{ 
             from: walletAddress, 
@@ -207,10 +243,13 @@ const App: React.FC = () => {
     if (isSpinning || spinResultIndex !== null) return;
     if (!walletAddress) { await connectWallet(); return; }
 
+    const provider = getFarcasterProvider();
+    if (!provider) return;
+
     try {
         setError(null);
         await switchToBaseChain();
-        await window.ethereum.request({
+        await provider.request({
             method: 'eth_sendTransaction',
             params: [{ from: walletAddress, to: walletAddress, value: '0x0', data: '0x7370696e' }],
         });
@@ -230,6 +269,10 @@ const App: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!walletAddress) { await connectWallet(); return; }
+    
+    const provider = getFarcasterProvider();
+    if (!provider) return;
+
     setGenStatus('signing');
     setError(null);
     setResult(null);
@@ -237,7 +280,7 @@ const App: React.FC = () => {
     try {
       await switchToBaseChain();
       // Simple self-send signature for simulation of "AI Generation Fee" (0 ETH)
-      await window.ethereum.request({
+      await provider.request({
         method: 'eth_sendTransaction',
         params: [{ from: walletAddress, to: walletAddress, value: '0x0', data: '0x676d2d67656e' }],
       });
