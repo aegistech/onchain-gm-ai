@@ -18,29 +18,6 @@ declare global {
 const BASE_CHAIN_ID = '0x2105'; // 8453 in hex
 const GM_CONTRACT_ADDRESS = '0x1DEe998c8801aD2eE57CF4D54FF3263cd0a98b35';
 
-// Helper to get the best provider, prioritizing Farcaster/Coinbase
-const getFarcasterProvider = () => {
-    // 1. First priority: The provider explicitly injected by the Frame SDK
-    if (sdk.wallet && sdk.wallet.ethProvider) {
-        return sdk.wallet.ethProvider;
-    }
-
-    // 2. Check for EIP-6963 Multi-Injected Providers
-    if (typeof window.ethereum !== 'undefined' && window.ethereum.providers) {
-        // Find the one that identifies as Coinbase Wallet (Warpcast uses this core)
-        const fcProvider = window.ethereum.providers.find((p: any) => p.isCoinbaseWallet);
-        if (fcProvider) return fcProvider;
-    }
-
-    // 3. Check if the main window.ethereum is Coinbase/Farcaster
-    if (typeof window.ethereum !== 'undefined' && window.ethereum.isCoinbaseWallet) {
-        return window.ethereum;
-    }
-
-    // 4. Last resort: Standard window.ethereum (MetaMask, etc.)
-    return window.ethereum;
-};
-
 // Brutalist Badge
 const MintedBadge = ({ tx, streak, date }: { tx: string, streak: number, date: string }) => {
     
@@ -118,27 +95,62 @@ const App: React.FC = () => {
   const [isSpinning, setIsSpinning] = useState(false);
   const [spinResultIndex, setSpinResultIndex] = useState<number | null>(null);
   const [showSpinModal, setShowSpinModal] = useState(false);
+  
+  // Farcaster State
+  const [isSDKLoaded, setIsSDKLoaded] = useState(false);
+  const [context, setContext] = useState<any>(null);
 
   // Initialize Farcaster SDK
   useEffect(() => {
     const initFrame = async () => {
       try {
+        setContext(await sdk.context);
+        
+        // Call ready immediately to signal loading complete
         if (sdk && sdk.actions && sdk.actions.ready) {
-            await sdk.actions.ready();
+            sdk.actions.ready();
+            setIsSDKLoaded(true);
+            console.log("Farcaster SDK Ready");
         }
       } catch (err) {
         console.error("Frame SDK Init Error:", err);
       }
     };
-    initFrame();
+    
+    // Add a small delay to ensure DOM is fully painted on mobile
+    setTimeout(initFrame, 100);
   }, []);
 
-  // Check for connected account on load
+  // Helper to get the best provider, prioritizing Farcaster/Coinbase
+  const getFarcasterProvider = useCallback(() => {
+    // 1. If we are in a Frame context, ALWAYS try the SDK provider first
+    if (isSDKLoaded && sdk.wallet && sdk.wallet.ethProvider) {
+        return sdk.wallet.ethProvider;
+    }
+
+    // 2. Check for EIP-6963 Multi-Injected Providers
+    if (typeof window.ethereum !== 'undefined' && window.ethereum.providers) {
+        // Find the one that identifies as Coinbase Wallet (Warpcast uses this core)
+        const fcProvider = window.ethereum.providers.find((p: any) => p.isCoinbaseWallet);
+        if (fcProvider) return fcProvider;
+    }
+
+    // 3. Check if the main window.ethereum is Coinbase/Farcaster
+    if (typeof window.ethereum !== 'undefined' && window.ethereum.isCoinbaseWallet) {
+        return window.ethereum;
+    }
+
+    // 4. Last resort: Standard window.ethereum (MetaMask, etc.)
+    return window.ethereum;
+  }, [isSDKLoaded]);
+
+  // Check for connected account on load or when SDK loads
   useEffect(() => {
     const checkAccount = async () => {
         const provider = getFarcasterProvider();
         if (provider) {
             try {
+                // If in frame, we might need to request accounts to trigger the connection
                 const accounts = await provider.request({ method: 'eth_accounts' });
                 if (accounts.length > 0) {
                     setWalletAddress(accounts[0]);
@@ -148,8 +160,13 @@ const App: React.FC = () => {
             }
         }
     };
-    checkAccount();
-  }, []);
+    if (isSDKLoaded) {
+        checkAccount();
+    } else {
+        // Try anyway for browser testing
+        checkAccount();
+    }
+  }, [isSDKLoaded, getFarcasterProvider]);
 
   const switchToBaseChain = async () => {
     const provider = getFarcasterProvider();
@@ -194,7 +211,7 @@ const App: React.FC = () => {
         setError("Connection rejected.");
       }
     } else {
-        setError("Wallet not found.");
+        setError("Wallet not found. Use Warpcast.");
     }
   };
 
@@ -428,7 +445,7 @@ const App: React.FC = () => {
         </div>
 
         <footer className="mt-12 text-center border-t border-dashed border-gray-400 pt-4">
-          <p className="text-[10px] uppercase font-bold text-gray-500">System Ready • v1.0.4</p>
+          <p className="text-[10px] uppercase font-bold text-gray-500">System Ready • v1.0.5</p>
         </footer>
       </div>
     </div>
