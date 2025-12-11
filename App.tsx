@@ -17,7 +17,13 @@ declare global {
 
 const BASE_CHAIN_ID_HEX = '0x2105'; // 8453 in hex
 const BASE_CHAIN_ID_DEC = 8453;
-const GM_CONTRACT_ADDRESS = '0x1DEe998c8801aD2eE57CF4D54FF3263cd0a98b35';
+
+// Contract Address đã được điền
+const GM_CONTRACT_ADDRESS = '0x4a8203f178Ae02163d25dFc83249515Ae066068e'; 
+
+// Selectors for SimpleGM Contract
+const SELECTOR_GM = '0x2437e542'; // gm()
+const SELECTOR_GET_STREAK = '0x92c63748'; // getStreak(address)
 
 // Brutalist Badge
 const MintedBadge = ({ tx, streak, date }: { tx: string, streak: number, date: string }) => {
@@ -86,11 +92,12 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   
   // Onchain State
-  const [streak, setStreak] = useState(42);
+  const [streak, setStreak] = useState(0); // Default 0
   const [totalGMs, setTotalGMs] = useState(1337);
   const [mintStatus, setMintStatus] = useState<'idle' | 'signing' | 'minting' | 'minted'>('idle');
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [lastMintTx, setLastMintTx] = useState<string | null>(null);
+  const [isContractMode, setIsContractMode] = useState(false);
 
   // Spin Wheel State
   const [isSpinning, setIsSpinning] = useState(false);
@@ -104,10 +111,7 @@ const App: React.FC = () => {
   useEffect(() => {
     const initFrame = async () => {
       try {
-        // Wait for context
         await sdk.context;
-        
-        // Signal ready
         sdk.actions.ready();
         setIsSDKReady(true);
         console.log("Farcaster SDK Ready");
@@ -115,24 +119,47 @@ const App: React.FC = () => {
         console.error("Frame SDK Init Error:", err);
       }
     };
-    
     initFrame();
   }, []);
 
   // Helper to get the correct provider
-  // CRITICAL FIX: Prioritize sdk.wallet.ethProvider for Farcaster Frames
   const getProvider = useCallback(() => {
-    // 1. First priority: Farcaster SDK Provider (for Mobile/Web Frame)
     if (sdk && sdk.wallet && sdk.wallet.ethProvider) {
         return sdk.wallet.ethProvider;
     }
-
-    // 2. Fallback: Window Ethereum (Browser Extension)
     if (typeof window !== 'undefined' && window.ethereum) {
         return window.ethereum;
     }
-
     return null;
+  }, []);
+
+  // Fetch Streak from Chain
+  const fetchStreak = useCallback(async (address: string, provider: any) => {
+    if (!GM_CONTRACT_ADDRESS) {
+        setStreak(42); // Demo value in simulation mode
+        return;
+    }
+    
+    try {
+        // Encode: selector + address padded to 32 bytes
+        const cleanAddr = address.replace('0x', '');
+        const paddedAddr = cleanAddr.padStart(64, '0');
+        const data = SELECTOR_GET_STREAK + paddedAddr;
+
+        const hexResult = await provider.request({
+            method: 'eth_call',
+            params: [{ to: GM_CONTRACT_ADDRESS, data: data }, 'latest']
+        });
+
+        // Parse hex result
+        const streakValue = parseInt(hexResult, 16);
+        setStreak(isNaN(streakValue) ? 0 : streakValue);
+        setIsContractMode(true);
+    } catch (e) {
+        console.error("Error fetching streak:", e);
+        // Fallback to local
+        setStreak(42);
+    }
   }, []);
 
   // Check for connected account
@@ -145,19 +172,19 @@ const App: React.FC = () => {
         if (accounts && accounts.length > 0) {
             setWalletAddress(accounts[0]);
             console.log("Wallet connected:", accounts[0]);
+            await fetchStreak(accounts[0], provider);
         }
     } catch (e) {
         console.error("Error checking accounts:", e);
     }
-  }, [getProvider]);
+  }, [getProvider, fetchStreak]);
 
   // Initial Check
   useEffect(() => {
     if (isSDKReady) {
         checkAccount();
     } else {
-        // Retry shortly for browser testing if SDK isn't involved
-        const timer = setTimeout(checkAccount, 500);
+        const timer = setTimeout(checkAccount, 1000);
         return () => clearTimeout(timer);
     }
   }, [isSDKReady, checkAccount]);
@@ -170,7 +197,6 @@ const App: React.FC = () => {
       });
       return true;
     } catch (switchError: any) {
-      // This error code indicates that the chain has not been added to MetaMask.
       if (switchError.code === 4902 || switchError.code === -32603) {
         try {
           await provider.request({
@@ -191,7 +217,6 @@ const App: React.FC = () => {
           return false;
         }
       }
-      console.error("Failed to switch chain", switchError);
       return false;
     }
   };
@@ -205,6 +230,7 @@ const App: React.FC = () => {
             setWalletAddress(accounts[0]);
             setError(null);
             await switchToBaseChain(provider);
+            await fetchStreak(accounts[0], provider);
         }
       } catch (err: any) {
         console.error(err);
@@ -219,46 +245,48 @@ const App: React.FC = () => {
     if (mintStatus !== 'idle') return;
     
     const provider = getProvider();
-    if (!provider) {
-        setError("Wallet provider not found.");
+    if (!provider || !walletAddress) {
+        await connectWallet();
         return;
-    }
-
-    if (!walletAddress) { 
-        await connectWallet(); 
-        // If still no address after connect attempt, abort
-        if (!walletAddress) return;
     }
 
     try {
       setMintStatus('signing');
       setError(null);
-      
-      // Ensure we are on Base
       await switchToBaseChain(provider);
 
-      // Re-fetch account to ensure we use the active one for 'from'
       const accounts = await provider.request({ method: 'eth_accounts' });
       const activeAccount = accounts[0];
 
-      if (!activeAccount) {
-        throw new Error("No account connected");
+      let txHash = '';
+
+      if (GM_CONTRACT_ADDRESS) {
+        // --- REAL CONTRACT MODE ---
+        console.log("Calling Contract:", GM_CONTRACT_ADDRESS);
+        txHash = await provider.request({
+            method: 'eth_sendTransaction',
+            params: [{ 
+                from: activeAccount, 
+                to: GM_CONTRACT_ADDRESS, 
+                data: SELECTOR_GM // gm()
+            }],
+        });
+      } else {
+        // --- SIMULATION MODE (SELF-SEND) ---
+        console.log("Simulating GM (Self-Send)");
+        txHash = await provider.request({
+            method: 'eth_sendTransaction',
+            params: [{ 
+                from: activeAccount, 
+                to: activeAccount, 
+                value: '0x0',      
+                data: '0x676d'     // "gm"
+            }],
+        });
       }
 
-      // Send transaction
-      // Function: gm() -> Selector: 0x2437e542
-      const hash = await provider.request({
-        method: 'eth_sendTransaction',
-        params: [{ 
-            from: activeAccount, 
-            to: GM_CONTRACT_ADDRESS, 
-            value: '0x0', 
-            data: '0x2437e542' // keccak256("gm()").substring(0, 8)
-        }],
-      });
-
-      console.log("TX Hash:", hash);
-      setLastMintTx(hash);
+      console.log("TX Hash:", txHash);
+      setLastMintTx(txHash);
       setMintStatus('minting');
       
       // Optimistic Update
@@ -266,42 +294,39 @@ const App: React.FC = () => {
         setMintStatus('minted');
         setStreak(s => s + 1);
         setTotalGMs(t => t + 1);
+        // Refetch streak after mint
+        if(walletAddress) fetchStreak(walletAddress, provider);
       }, 3000); 
 
     } catch (err: any) {
       setMintStatus('idle');
       console.error("Mint Error:", err);
-      // Simplify error message for user
       const msg = err.message || JSON.stringify(err);
       if (msg.includes("rejected")) {
           setError("Transaction rejected.");
       } else {
-          setError("Mint failed. Check console.");
+          setError("Mint failed. Try again.");
       }
     }
   };
 
   const handleSpin = async () => {
     if (isSpinning || spinResultIndex !== null) return;
-    
     const provider = getProvider();
     if (!walletAddress || !provider) { await connectWallet(); return; }
 
     try {
         setError(null);
         await switchToBaseChain(provider);
-        
         const accounts = await provider.request({ method: 'eth_accounts' });
-        const activeAccount = accounts[0];
-
-        // Self-send 0 ETH to simulate interaction for the wheel
+        
         await provider.request({
             method: 'eth_sendTransaction',
             params: [{ 
-                from: activeAccount, 
-                to: activeAccount, 
+                from: accounts[0], 
+                to: accounts[0], 
                 value: '0x0', 
-                data: '0x7370696e' // hex for 'spin'
+                data: '0x7370696e' 
             }],
         });
         
@@ -309,7 +334,6 @@ const App: React.FC = () => {
         const randomIndex = Math.floor(Math.random() * 6);
         setSpinResultIndex(randomIndex);
     } catch (err: any) {
-        console.error("Spin Error:", err);
         setError("Spin cancelled.");
     }
   };
@@ -321,7 +345,6 @@ const App: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     const provider = getProvider();
     if (!walletAddress || !provider) { await connectWallet(); return; }
 
@@ -332,14 +355,12 @@ const App: React.FC = () => {
     try {
       await switchToBaseChain(provider);
       const accounts = await provider.request({ method: 'eth_accounts' });
-      const activeAccount = accounts[0];
 
-      // Simple self-send signature for simulation of "AI Generation Fee" (0 ETH)
       await provider.request({
         method: 'eth_sendTransaction',
         params: [{ 
-            from: activeAccount, 
-            to: activeAccount, 
+            from: accounts[0], 
+            to: accounts[0], 
             value: '0x0', 
             data: '0x676d2d67656e' 
         }],
@@ -367,7 +388,7 @@ const App: React.FC = () => {
     <div className="min-h-screen pt-12 pb-20 font-mono transition-colors duration-300">
       <CryptoTicker />
 
-      {/* Main Container with Glassmorphism to contrast with background */}
+      {/* Main Container */}
       <div className="p-6 max-w-md mx-auto mt-6 bg-white/70 dark:bg-black/60 backdrop-blur-sm rounded-xl border border-white/50 dark:border-white/10 shadow-xl">
         
         {/* Header */}
@@ -398,7 +419,10 @@ const App: React.FC = () => {
         <div className="grid grid-cols-2 gap-4 mb-8">
             <div className="border-2 border-black dark:border-white p-2 bg-white dark:bg-black shadow-brutal">
                 <p className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">Streak</p>
-                <p className="text-2xl font-black text-black dark:text-white">{streak} 🔥</p>
+                <div className="flex items-center gap-2">
+                    <p className="text-2xl font-black text-black dark:text-white">{streak} 🔥</p>
+                    {isContractMode && <span className="text-[8px] bg-blue-500 text-white px-1">ONCHAIN</span>}
+                </div>
             </div>
             <div className="border-2 border-black dark:border-white p-2 bg-white dark:bg-black shadow-brutal">
                 <p className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">Total GMs</p>
@@ -426,6 +450,13 @@ const App: React.FC = () => {
               >
                   {mintStatus === 'signing' ? 'SIGN TX...' : mintStatus === 'minting' ? 'MINTING...' : 'MINT DAILY GM'}
               </button>
+          )}
+          
+          {/* Helper Text for Contract Mode */}
+          {!GM_CONTRACT_ADDRESS && walletAddress && (
+             <p className="text-[10px] text-center mt-2 opacity-50 font-mono">
+                (Simulation Mode: Deploy contract to enable real stats)
+             </p>
           )}
         </div>
         
