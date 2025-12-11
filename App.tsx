@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import sdk from '@farcaster/frame-sdk';
 import { AppMode, GeneratedContent } from './types';
 import { ResultCard } from './components/ResultCard';
@@ -15,7 +15,8 @@ declare global {
   }
 }
 
-const BASE_CHAIN_ID = '0x2105'; // 8453 in hex
+const BASE_CHAIN_ID_HEX = '0x2105'; // 8453 in hex
+const BASE_CHAIN_ID_DEC = 8453;
 const GM_CONTRACT_ADDRESS = '0x1DEe998c8801aD2eE57CF4D54FF3263cd0a98b35';
 
 // Brutalist Badge
@@ -97,94 +98,86 @@ const App: React.FC = () => {
   const [showSpinModal, setShowSpinModal] = useState(false);
   
   // Farcaster State
-  const [isSDKLoaded, setIsSDKLoaded] = useState(false);
-  const [context, setContext] = useState<any>(null);
+  const [isSDKReady, setIsSDKReady] = useState(false);
 
   // Initialize Farcaster SDK
   useEffect(() => {
     const initFrame = async () => {
       try {
-        setContext(await sdk.context);
+        // Wait for context
+        await sdk.context;
         
-        // Call ready immediately to signal loading complete
-        if (sdk && sdk.actions && sdk.actions.ready) {
-            sdk.actions.ready();
-            setIsSDKLoaded(true);
-            console.log("Farcaster SDK Ready");
-        }
+        // Signal ready
+        sdk.actions.ready();
+        setIsSDKReady(true);
+        console.log("Farcaster SDK Ready");
       } catch (err) {
         console.error("Frame SDK Init Error:", err);
       }
     };
     
-    // Add a small delay to ensure DOM is fully painted on mobile
-    setTimeout(initFrame, 100);
+    initFrame();
   }, []);
 
-  // Helper to get the best provider, prioritizing Farcaster/Coinbase
-  const getFarcasterProvider = useCallback(() => {
-    // 1. If we are in a Frame context, ALWAYS try the SDK provider first
-    if (isSDKLoaded && sdk.wallet && sdk.wallet.ethProvider) {
+  // Helper to get the correct provider
+  // CRITICAL FIX: Prioritize sdk.wallet.ethProvider for Farcaster Frames
+  const getProvider = useCallback(() => {
+    // 1. First priority: Farcaster SDK Provider (for Mobile/Web Frame)
+    if (sdk && sdk.wallet && sdk.wallet.ethProvider) {
         return sdk.wallet.ethProvider;
     }
 
-    // 2. Check for EIP-6963 Multi-Injected Providers
-    if (typeof window.ethereum !== 'undefined' && window.ethereum.providers) {
-        // Find the one that identifies as Coinbase Wallet (Warpcast uses this core)
-        const fcProvider = window.ethereum.providers.find((p: any) => p.isCoinbaseWallet);
-        if (fcProvider) return fcProvider;
-    }
-
-    // 3. Check if the main window.ethereum is Coinbase/Farcaster
-    if (typeof window.ethereum !== 'undefined' && window.ethereum.isCoinbaseWallet) {
+    // 2. Fallback: Window Ethereum (Browser Extension)
+    if (typeof window !== 'undefined' && window.ethereum) {
         return window.ethereum;
     }
 
-    // 4. Last resort: Standard window.ethereum (MetaMask, etc.)
-    return window.ethereum;
-  }, [isSDKLoaded]);
+    return null;
+  }, []);
 
-  // Check for connected account on load or when SDK loads
-  useEffect(() => {
-    const checkAccount = async () => {
-        const provider = getFarcasterProvider();
-        if (provider) {
-            try {
-                // If in frame, we might need to request accounts to trigger the connection
-                const accounts = await provider.request({ method: 'eth_accounts' });
-                if (accounts.length > 0) {
-                    setWalletAddress(accounts[0]);
-                }
-            } catch (e) {
-                console.error("Error checking accounts:", e);
-            }
-        }
-    };
-    if (isSDKLoaded) {
-        checkAccount();
-    } else {
-        // Try anyway for browser testing
-        checkAccount();
-    }
-  }, [isSDKLoaded, getFarcasterProvider]);
-
-  const switchToBaseChain = async () => {
-    const provider = getFarcasterProvider();
+  // Check for connected account
+  const checkAccount = useCallback(async () => {
+    const provider = getProvider();
     if (!provider) return;
 
     try {
+        const accounts = await provider.request({ method: 'eth_accounts' });
+        if (accounts && accounts.length > 0) {
+            setWalletAddress(accounts[0]);
+            console.log("Wallet connected:", accounts[0]);
+        }
+    } catch (e) {
+        console.error("Error checking accounts:", e);
+    }
+  }, [getProvider]);
+
+  // Initial Check
+  useEffect(() => {
+    if (isSDKReady) {
+        checkAccount();
+    } else {
+        // Retry shortly for browser testing if SDK isn't involved
+        const timer = setTimeout(checkAccount, 500);
+        return () => clearTimeout(timer);
+    }
+  }, [isSDKReady, checkAccount]);
+
+  const switchToBaseChain = async (provider: any) => {
+    try {
       await provider.request({
         method: 'wallet_switchEthereumChain',
-        params: [{ chainId: BASE_CHAIN_ID }],
+        params: [{ chainId: BASE_CHAIN_ID_HEX }],
       });
+      return true;
     } catch (switchError: any) {
-      if (switchError.code === 4902) {
+      // This error code indicates that the chain has not been added to MetaMask.
+      if (switchError.code === 4902 || switchError.code === -32603) {
         try {
           await provider.request({
             method: 'wallet_addEthereumChain',
             params: [
               {
-                chainId: BASE_CHAIN_ID,
+                chainId: BASE_CHAIN_ID_HEX,
                 chainName: 'Base',
                 nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
                 rpcUrls: ['https://mainnet.base.org'],
@@ -192,53 +185,79 @@ const App: React.FC = () => {
               },
             ],
           });
+          return true;
         } catch (addError) {
           console.error("Failed to add Base chain", addError);
+          return false;
         }
       }
+      console.error("Failed to switch chain", switchError);
+      return false;
     }
   };
 
   const connectWallet = async () => {
-    const provider = getFarcasterProvider();
+    const provider = getProvider();
     if (provider) {
       try {
         const accounts = await provider.request({ method: 'eth_requestAccounts' });
-        setWalletAddress(accounts[0]);
-        setError(null);
-        await switchToBaseChain();
+        if (accounts && accounts.length > 0) {
+            setWalletAddress(accounts[0]);
+            setError(null);
+            await switchToBaseChain(provider);
+        }
       } catch (err: any) {
-        setError("Connection rejected.");
+        console.error(err);
+        setError("Connection rejected. Please try again.");
       }
     } else {
-        setError("Wallet not found. Use Warpcast.");
+        setError("Wallet not found. Open in Warpcast.");
     }
   };
 
   const handleMint = async () => {
     if (mintStatus !== 'idle') return;
-    if (!walletAddress) { await connectWallet(); return; }
+    
+    const provider = getProvider();
+    if (!provider) {
+        setError("Wallet provider not found.");
+        return;
+    }
 
-    const provider = getFarcasterProvider();
-    if (!provider) return;
+    if (!walletAddress) { 
+        await connectWallet(); 
+        // If still no address after connect attempt, abort
+        if (!walletAddress) return;
+    }
 
     try {
       setMintStatus('signing');
       setError(null);
-      await switchToBaseChain();
+      
+      // Ensure we are on Base
+      await switchToBaseChain(provider);
 
-      // Send transaction to the real contract
+      // Re-fetch account to ensure we use the active one for 'from'
+      const accounts = await provider.request({ method: 'eth_accounts' });
+      const activeAccount = accounts[0];
+
+      if (!activeAccount) {
+        throw new Error("No account connected");
+      }
+
+      // Send transaction
       // Function: gm() -> Selector: 0x2437e542
       const hash = await provider.request({
         method: 'eth_sendTransaction',
         params: [{ 
-            from: walletAddress, 
+            from: activeAccount, 
             to: GM_CONTRACT_ADDRESS, 
             value: '0x0', 
             data: '0x2437e542' // keccak256("gm()").substring(0, 8)
         }],
       });
 
+      console.log("TX Hash:", hash);
       setLastMintTx(hash);
       setMintStatus('minting');
       
@@ -251,28 +270,46 @@ const App: React.FC = () => {
 
     } catch (err: any) {
       setMintStatus('idle');
-      setError(err.message || "Mint failed.");
+      console.error("Mint Error:", err);
+      // Simplify error message for user
+      const msg = err.message || JSON.stringify(err);
+      if (msg.includes("rejected")) {
+          setError("Transaction rejected.");
+      } else {
+          setError("Mint failed. Check console.");
+      }
     }
   };
 
   const handleSpin = async () => {
     if (isSpinning || spinResultIndex !== null) return;
-    if (!walletAddress) { await connectWallet(); return; }
-
-    const provider = getFarcasterProvider();
-    if (!provider) return;
+    
+    const provider = getProvider();
+    if (!walletAddress || !provider) { await connectWallet(); return; }
 
     try {
         setError(null);
-        await switchToBaseChain();
+        await switchToBaseChain(provider);
+        
+        const accounts = await provider.request({ method: 'eth_accounts' });
+        const activeAccount = accounts[0];
+
+        // Self-send 0 ETH to simulate interaction for the wheel
         await provider.request({
             method: 'eth_sendTransaction',
-            params: [{ from: walletAddress, to: walletAddress, value: '0x0', data: '0x7370696e' }],
+            params: [{ 
+                from: activeAccount, 
+                to: activeAccount, 
+                value: '0x0', 
+                data: '0x7370696e' // hex for 'spin'
+            }],
         });
+        
         setIsSpinning(true);
         const randomIndex = Math.floor(Math.random() * 6);
         setSpinResultIndex(randomIndex);
     } catch (err: any) {
+        console.error("Spin Error:", err);
         setError("Spin cancelled.");
     }
   };
@@ -284,22 +321,30 @@ const App: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!walletAddress) { await connectWallet(); return; }
     
-    const provider = getFarcasterProvider();
-    if (!provider) return;
+    const provider = getProvider();
+    if (!walletAddress || !provider) { await connectWallet(); return; }
 
     setGenStatus('signing');
     setError(null);
     setResult(null);
 
     try {
-      await switchToBaseChain();
+      await switchToBaseChain(provider);
+      const accounts = await provider.request({ method: 'eth_accounts' });
+      const activeAccount = accounts[0];
+
       // Simple self-send signature for simulation of "AI Generation Fee" (0 ETH)
       await provider.request({
         method: 'eth_sendTransaction',
-        params: [{ from: walletAddress, to: walletAddress, value: '0x0', data: '0x676d2d67656e' }],
+        params: [{ 
+            from: activeAccount, 
+            to: activeAccount, 
+            value: '0x0', 
+            data: '0x676d2d67656e' 
+        }],
       });
+      
       setGenStatus('generating');
       if (mode === AppMode.GM_TEXT) {
         const text = await generateGMText(prompt);
@@ -309,7 +354,8 @@ const App: React.FC = () => {
         setResult({ imageUrl });
       }
     } catch (err: any) {
-       setError(err.message || 'Error.');
+       console.error("Gen Error:", err);
+       setError('Generation cancelled or failed.');
     } finally {
       setGenStatus('idle');
     }
