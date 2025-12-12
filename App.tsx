@@ -18,7 +18,7 @@ declare global {
 const BASE_CHAIN_ID_HEX = '0x2105'; // 8453 in hex
 const BASE_CHAIN_ID_DEC = 8453;
 
-// Contract Address đã được điền
+// Contract Address
 const GM_CONTRACT_ADDRESS = '0x4a8203f178Ae02163d25dFc83249515Ae066068e'; 
 
 // Selectors for SimpleGM Contract
@@ -38,7 +38,6 @@ const MintedBadge = ({ tx, streak, date }: { tx: string, streak: number, date: s
     <div className="mx-auto max-w-sm my-8 animate-fade-in font-mono">
         {/* Ticket Design */}
         <div className="bg-white dark:bg-terminal border-2 border-black dark:border-white shadow-brutal relative p-6">
-            {/* Cutout circles for ticket effect */}
             <div className="absolute top-1/2 -left-3 w-6 h-6 bg-blue-50 dark:bg-[#0f172a] rounded-full border-r-2 border-black dark:border-white"></div>
             <div className="absolute top-1/2 -right-3 w-6 h-6 bg-blue-50 dark:bg-[#0f172a] rounded-full border-l-2 border-black dark:border-white"></div>
 
@@ -92,7 +91,7 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   
   // Onchain State
-  const [streak, setStreak] = useState(0); // Default 0
+  const [streak, setStreak] = useState(0); 
   const [totalGMs, setTotalGMs] = useState(1337);
   const [mintStatus, setMintStatus] = useState<'idle' | 'signing' | 'minting' | 'minted'>('idle');
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
@@ -107,41 +106,49 @@ const App: React.FC = () => {
   // Farcaster State
   const [isSDKReady, setIsSDKReady] = useState(false);
 
-  // Initialize Farcaster SDK
-  useEffect(() => {
-    const initFrame = async () => {
-      try {
-        await sdk.context;
-        sdk.actions.ready();
-        setIsSDKReady(true);
-        console.log("Farcaster SDK Ready");
-      } catch (err) {
-        console.error("Frame SDK Init Error:", err);
-      }
-    };
-    initFrame();
-  }, []);
-
   // Helper to get the correct provider
   const getProvider = useCallback(() => {
+    // Priority 1: Farcaster SDK Provider (Mobile/Web Frame)
     if (sdk && sdk.wallet && sdk.wallet.ethProvider) {
         return sdk.wallet.ethProvider;
     }
+    // Priority 2: Injected Provider (Metamask/Coinbase Wallet on Desktop)
     if (typeof window !== 'undefined' && window.ethereum) {
         return window.ethereum;
     }
     return null;
   }, []);
 
+  // Initialize Farcaster SDK - CALL READY IMMEDIATELY for Mobile
+  useEffect(() => {
+    const initFrame = async () => {
+      try {
+        // Tell Farcaster we are ready to show UI immediately
+        sdk.actions.ready();
+        
+        // Then wait for context
+        const context = await sdk.context;
+        setIsSDKReady(true);
+        console.log("Farcaster Context Loaded:", context);
+        
+        // Attempt to connect wallet automatically if context exists
+        if (context) {
+             checkAccount();
+        }
+      } catch (err) {
+        console.error("Frame SDK Init Error:", err);
+        // Even on error, say ready so the app doesn't hang
+        sdk.actions.ready();
+      }
+    };
+    initFrame();
+  }, []);
+
   // Fetch Streak from Chain
   const fetchStreak = useCallback(async (address: string, provider: any) => {
-    if (!GM_CONTRACT_ADDRESS) {
-        setStreak(42); // Demo value in simulation mode
-        return;
-    }
+    if (!GM_CONTRACT_ADDRESS) return;
     
     try {
-        // Encode: selector + address padded to 32 bytes
         const cleanAddr = address.replace('0x', '');
         const paddedAddr = cleanAddr.padStart(64, '0');
         const data = SELECTOR_GET_STREAK + paddedAddr;
@@ -151,14 +158,11 @@ const App: React.FC = () => {
             params: [{ to: GM_CONTRACT_ADDRESS, data: data }, 'latest']
         });
 
-        // Parse hex result
         const streakValue = parseInt(hexResult, 16);
         setStreak(isNaN(streakValue) ? 0 : streakValue);
         setIsContractMode(true);
     } catch (e) {
         console.error("Error fetching streak:", e);
-        // Fallback to local
-        setStreak(42);
     }
   }, []);
 
@@ -171,23 +175,12 @@ const App: React.FC = () => {
         const accounts = await provider.request({ method: 'eth_accounts' });
         if (accounts && accounts.length > 0) {
             setWalletAddress(accounts[0]);
-            console.log("Wallet connected:", accounts[0]);
             await fetchStreak(accounts[0], provider);
         }
     } catch (e) {
         console.error("Error checking accounts:", e);
     }
   }, [getProvider, fetchStreak]);
-
-  // Initial Check
-  useEffect(() => {
-    if (isSDKReady) {
-        checkAccount();
-    } else {
-        const timer = setTimeout(checkAccount, 1000);
-        return () => clearTimeout(timer);
-    }
-  }, [isSDKReady, checkAccount]);
 
   const switchToBaseChain = async (provider: any) => {
     try {
@@ -263,24 +256,38 @@ const App: React.FC = () => {
       if (GM_CONTRACT_ADDRESS) {
         // --- REAL CONTRACT MODE ---
         console.log("Calling Contract:", GM_CONTRACT_ADDRESS);
-        txHash = await provider.request({
-            method: 'eth_sendTransaction',
-            params: [{ 
-                from: activeAccount, 
-                to: GM_CONTRACT_ADDRESS, 
-                data: SELECTOR_GM // gm()
-            }],
-        });
+        
+        // Manual Gas Limit helps prevent "Execution Reverted" on some wallets for Base L2
+        // 150000 gas is plenty for a simple storage update
+        const txParams = {
+            from: activeAccount, 
+            to: GM_CONTRACT_ADDRESS, 
+            data: SELECTOR_GM, // gm()
+            gas: '0x249F0', // ~150,000 gas limit (Hex)
+        };
+
+        try {
+            txHash = await provider.request({
+                method: 'eth_sendTransaction',
+                params: [txParams],
+            });
+        } catch (innerErr: any) {
+            // Check for specific revert reasons
+            if (innerErr.message && innerErr.message.includes("Already GM")) {
+                throw new Error("You already GM'd today! Come back tomorrow.");
+            }
+            throw innerErr;
+        }
+
       } else {
-        // --- SIMULATION MODE (SELF-SEND) ---
-        console.log("Simulating GM (Self-Send)");
+        // --- SIMULATION MODE ---
         txHash = await provider.request({
             method: 'eth_sendTransaction',
             params: [{ 
                 from: activeAccount, 
                 to: activeAccount, 
                 value: '0x0',      
-                data: '0x676d'     // "gm"
+                data: '0x676d'
             }],
         });
       }
@@ -289,12 +296,10 @@ const App: React.FC = () => {
       setLastMintTx(txHash);
       setMintStatus('minting');
       
-      // Optimistic Update
       setTimeout(() => {
         setMintStatus('minted');
         setStreak(s => s + 1);
         setTotalGMs(t => t + 1);
-        // Refetch streak after mint
         if(walletAddress) fetchStreak(walletAddress, provider);
       }, 3000); 
 
@@ -302,8 +307,11 @@ const App: React.FC = () => {
       setMintStatus('idle');
       console.error("Mint Error:", err);
       const msg = err.message || JSON.stringify(err);
+      
       if (msg.includes("rejected")) {
           setError("Transaction rejected.");
+      } else if (msg.includes("already GM") || msg.includes("Wait for tomorrow")) {
+          setError("Already GM today! ☀️");
       } else {
           setError("Mint failed. Try again.");
       }
@@ -320,13 +328,15 @@ const App: React.FC = () => {
         await switchToBaseChain(provider);
         const accounts = await provider.request({ method: 'eth_accounts' });
         
+        // Add gas limit for spin too just in case
         await provider.request({
             method: 'eth_sendTransaction',
             params: [{ 
                 from: accounts[0], 
                 to: accounts[0], 
                 value: '0x0', 
-                data: '0x7370696e' 
+                data: '0x7370696e',
+                gas: '0x5208' // 21000 gas
             }],
         });
         
@@ -362,7 +372,8 @@ const App: React.FC = () => {
             from: accounts[0], 
             to: accounts[0], 
             value: '0x0', 
-            data: '0x676d2d67656e' 
+            data: '0x676d2d67656e',
+            gas: '0x5208' 
         }],
       });
       
@@ -388,10 +399,8 @@ const App: React.FC = () => {
     <div className="min-h-screen pt-12 pb-20 font-mono transition-colors duration-300">
       <CryptoTicker />
 
-      {/* Main Container */}
       <div className="p-6 max-w-md mx-auto mt-6 bg-white/70 dark:bg-black/60 backdrop-blur-sm rounded-xl border border-white/50 dark:border-white/10 shadow-xl">
         
-        {/* Header */}
         <header className="mb-8 flex justify-between items-end border-b-4 border-black dark:border-white pb-4">
           <div>
             <h1 className="text-3xl font-black uppercase text-black dark:text-white leading-none">
@@ -415,7 +424,6 @@ const App: React.FC = () => {
           </div>
         </header>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 gap-4 mb-8">
             <div className="border-2 border-black dark:border-white p-2 bg-white dark:bg-black shadow-brutal">
                 <p className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">Streak</p>
@@ -430,7 +438,6 @@ const App: React.FC = () => {
             </div>
         </div>
 
-        {/* Mint Button */}
         <div className="mb-8">
           {mintStatus === 'minted' && lastMintTx ? (
             <MintedBadge 
@@ -452,7 +459,6 @@ const App: React.FC = () => {
               </button>
           )}
           
-          {/* Helper Text for Contract Mode */}
           {!GM_CONTRACT_ADDRESS && walletAddress && (
              <p className="text-[10px] text-center mt-2 opacity-50 font-mono">
                 (Simulation Mode: Deploy contract to enable real stats)
@@ -460,7 +466,6 @@ const App: React.FC = () => {
           )}
         </div>
         
-        {/* Spin Wheel */}
         <div className="mb-12">
             <SpinWheel 
                 isSpinning={isSpinning}
@@ -471,7 +476,6 @@ const App: React.FC = () => {
             />
         </div>
 
-        {/* Modal for Spin */}
         {showSpinModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
                 <div className="bg-white dark:bg-terminal border-2 border-black dark:border-white p-6 max-w-xs w-full text-center shadow-brutal-lg rounded-xl">
@@ -488,7 +492,6 @@ const App: React.FC = () => {
             </div>
         )}
 
-        {/* AI Generator */}
         <div className="border-t-4 border-black dark:border-white pt-8">
           <TabSwitcher currentMode={mode} onSwitch={setMode} />
 
@@ -522,7 +525,7 @@ const App: React.FC = () => {
         </div>
 
         <footer className="mt-12 text-center border-t border-dashed border-gray-400 pt-4">
-          <p className="text-[10px] uppercase font-bold text-gray-500">System Ready • v1.0.5</p>
+          <p className="text-[10px] uppercase font-bold text-gray-500">System Ready • v1.0.6</p>
         </footer>
       </div>
     </div>
